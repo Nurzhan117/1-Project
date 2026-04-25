@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FitTrack — Мой прогресс</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #12121a;
+  --bg3: #1a1a26;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0eff8;
+  --text2: #8886a0;
+  --text3: #4a4860;
+  --accent: #7c6ff7;
+  --accent2: #a99ff9;
+  --accent-bg: rgba(124,111,247,0.12);
+  --green: #4ade80;
+  --green-bg: rgba(74,222,128,0.1);
+  --amber: #fbbf24;
+  --amber-bg: rgba(251,191,36,0.1);
+  --red: #f87171;
+  --red-bg: rgba(248,113,113,0.1);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font: 'Space Grotesk', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* Layout */
+.container { max-width: 480px; margin: 0 auto; padding: 0 16px 80px; }
+
+/* Header */
+.header {
+  padding: 28px 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.level-pill {
+  background: var(--accent-bg);
+  border: 1px solid rgba(124,111,247,0.25);
+  color: var(--accent2);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+}
+
+/* XP Bar */
+.xp-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.xp-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.xp-title { font-size: 13px; color: var(--text2); }
+.xp-nums { font-size: 12px; font-family: var(--mono); color: var(--accent2); }
+.xp-bar {
+  height: 6px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.xp-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+}
+
+/* Stats grid */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.stat {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: center;
+}
+.stat-val {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.stat-label { font-size: 11px; color: var(--text3); letter-spacing: 0.04em; text-transform: uppercase; }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.fire { font-size: 18px; }
+
+/* Section header */
+.sec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 22px 0 12px;
+}
+.sec-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.sec-date { font-size: 12px; color: var(--text2); }
+
+/* Checkin cards */
+.checkins {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.checkin {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+.checkin:hover { border-color: var(--border2); transform: translateY(-1px); }
+.checkin:active { transform: scale(0.97); }
+.checkin.done {
+  border-color: rgba(124,111,247,0.4);
+  background: linear-gradient(135deg, var(--bg2), rgba(124,111,247,0.08));
+}
+.checkin.done::after {
+  content: '✓';
+  position: absolute;
+  top: 10px; right: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+}
+.ci-emoji { font-size: 26px; margin-bottom: 8px; display: block; }
+.ci-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.ci-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.ci-xp {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--accent2);
+  background: var(--accent-bg);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* Weight input */
+.weight-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.weight-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+.weight-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.weight-input:focus { border-color: var(--accent); }
+.weight-input::placeholder { color: var(--text3); font-size: 14px; font-family: var(--font); }
+.btn {
+  background: var(--accent-bg);
+  border: 1px solid rgba(124,111,247,0.3);
+  color: var(--accent2);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn:hover { background: rgba(124,111,247,0.2); border-color: rgba(124,111,247,0.5); }
+.btn:active { transform: scale(0.97); }
+
+/* Chart */
+.chart-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.chart-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.tab {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.2s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--accent-bg);
+  border-color: rgba(124,111,247,0.35);
+  color: var(--accent2);
+}
+.chart-wrap { position: relative; width: 100%; height: 180px; }
+
+/* History */
+.history { max-height: 260px; overflow-y: auto; }
+.hist-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.hist-day:last-child { border-bottom: none; }
+.hist-date { font-size: 13px; color: var(--text2); min-width: 70px; font-family: var(--mono); }
+.hist-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+.b-w { background: var(--green-bg); color: var(--green); }
+.b-n { background: var(--amber-bg); color: var(--amber); }
+.b-wt { background: var(--accent-bg); color: var(--accent2); }
+.hist-xp { font-size: 12px; font-weight: 600; font-family: var(--mono); color: var(--accent2); }
+
+/* Achievements */
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ach {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 8px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.ach.unlocked { border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.05); }
+.ach-icon { font-size: 22px; margin-bottom: 4px; filter: grayscale(1); opacity: 0.3; }
+.ach.unlocked .ach-icon { filter: none; opacity: 1; }
+.ach-name { font-size: 10px; color: var(--text3); font-weight: 500; line-height: 1.3; }
+.ach.unlocked .ach-name { color: var(--amber); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 24px;
+  z-index: 999;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Empty state */
+.empty { padding: 24px; text-align: center; color: var(--text3); font-size: 13px; }
+
+/* Reset */
+.reset-btn {
+  display: block;
+  margin: 8px auto 0;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.reset-btn:hover { color: var(--red); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">FitTrack</div>
+    <div class="level-pill" id="levelPill">Ур. 1 · Новичок</div>
+  </div>
+
+  <!-- XP Bar -->
+  <div class="xp-section">
+    <div class="xp-top">
+      <span class="xp-title">До следующего уровня</span>
+      <span class="xp-nums" id="xpNums">0 / 100 XP</span>
+    </div>
+    <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val" id="statXp">0</div>
+      <div class="stat-label">Очки XP</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val"><span id="statStreak">0</span> <span class="fire">🔥</span></div>
+      <div class="stat-label">Серия</div>
+      <div class="stat-sub">дней</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statWeight">—</div>
+      <div class="stat-label">Вес</div>
+      <div class="stat-sub">кг</div>
+    </div>
+  </div>
+
+  <!-- Today -->
+  <div class="sec-header">
+    <span class="sec-title">Сегодня</span>
+    <span class="sec-date" id="todayStr"></span>
+  </div>
+  <div class="checkins">
+    <div class="checkin" id="card-workout" onclick="toggle('workout')">
+      <span class="ci-emoji">🏋️</span>
+      <div class="ci-name">Тренировка</div>
+      <div class="ci-desc">Выполнена</div>
+      <span class="ci-xp">+30 XP</span>
+    </div>
+    <div class="checkin" id="card-nutrition" onclick="toggle('nutrition')">
+      <span class="ci-emoji">🥗</span>
+      <div class="ci-name">Питание</div>
+      <div class="ci-desc">Правильно питался</div>
+      <span class="ci-xp">+20 XP</span>
+    </div>
+  </div>
+
+  <!-- Weight -->
+  <div class="weight-card">
+    <div class="sec-title">Записать вес</div>
+    <div class="weight-row">
+      <input class="weight-input" id="wInput" type="number" step="0.1" min="30" max="300" placeholder="например 75.5 кг"/>
+      <button class="btn" onclick="logWeight()">+ Записать</button>
+    </div>
+  </div>
+
+  <!-- Chart / History -->
+  <div class="chart-card">
+    <div class="chart-tabs">
+      <button class="tab active" id="tab-chart" onclick="switchTab('chart')">График веса</button>
+      <button class="tab" id="tab-history" onclick="switchTab('history')">История</button>
+      <button class="tab" id="tab-ach" onclick="switchTab('ach')">Ачивки</button>
+    </div>
+    <div id="panel-chart">
+      <div class="chart-wrap">
+        <canvas id="myChart" role="img" aria-label="График изменения веса по датам">Данных пока нет.</canvas>
+      </div>
+    </div>
+    <div id="panel-history" style="display:none">
+      <div class="history" id="histList"></div>
+    </div>
+    <div id="panel-ach" style="display:none">
+      <div class="achievements" id="achGrid"></div>
+    </div>
+  </div>
+
+  <button class="reset-btn" onclick="doReset()">⚠ Сбросить все данные</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LEVELS = [
+  {name:'Новичок',xp:0},
+  {name:'Любитель',xp:100},
+  {name:'Спортсмен',xp:250},
+  {name:'Атлет',xp:500},
+  {name:'Чемпион',xp:1000},
+  {name:'Легенда',xp:2000},
+  {name:'Бог фитнеса',xp:4000}
+];
+
+const ACHIEVEMENTS = [
+  {id:'first_workout', icon:'🏋️', name:'Первая тренировка', check: s => Object.values(s.entries).some(e=>e.workout)},
+  {id:'first_nutrition', icon:'🥗', name:'Первое правильное питание', check: s => Object.values(s.entries).some(e=>e.nutrition)},
+  {id:'first_weight', icon:'⚖️', name:'Первый замер веса', check: s => s.weights.length > 0},
+  {id:'streak3', icon:'🔥', name:'3 дня подряд', check: s => calcStreak(s) >= 3},
+  {id:'streak7', icon:'🌟', name:'7 дней подряд', check: s => calcStreak(s) >= 7},
+  {id:'streak30', icon:'👑', name:'30 дней подряд', check: s => calcStreak(s) >= 30},
+  {id:'xp100', icon:'💎', name:'100 XP', check: s => s.totalXp >= 100},
+  {id:'xp500', icon:'🚀', name:'500 XP', check: s => s.totalXp >= 500},
+  {id:'weights10', icon:'📈', name:'10 замеров веса', check: s => s.weights.length >= 10},
+];
+
+let state = {totalXp:0, entries:{}, weights:[]};
+let chart = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem('fittrack_v2');
+    if (raw) state = JSON.parse(raw);
+  } catch(e) {}
+  render();
+}
+
+function save() {
+  try { localStorage.setItem('fittrack_v2', JSON.stringify(state)); } catch(e) {}
+}
+
+function todayKey() { return new Date().toISOString().slice(0,10); }
+
+function getLevel() {
+  let lv = 0;
+  LEVELS.forEach((l,i) => { if(state.totalXp >= l.xp) lv = i; });
+  return lv;
+}
+
+function getLvInfo() {
+  const lv = getLevel();
+  const cur = LEVELS[lv].xp;
+  const next = LEVELS[lv+1] ? LEVELS[lv+1].xp : LEVELS[lv].xp + 2000;
+  const prog = state.totalXp - cur;
+  const range = next - cur;
+  return {
+    name: LEVELS[lv].name,
+    num: lv + 1,
+    pct: Math.min(100, Math.round(prog / range * 100)),
+    prog, range
+  };
+}
+
+function calcStreak(s) {
+  const keys = Object.keys(s.entries).sort();
+  if (!keys.length) return 0;
+  let streak = 0;
+  const today = todayKey();
+  const d = new Date(today);
+  for (let i = 0; i < 400; i++) {
+    const k = d.toISOString().slice(0,10);
+    const e = s.entries[k];
+    if (e && (e.workout || e.nutrition || e.weightLogged)) {
+      streak++;
+    } else if (k !== today) {
+      break;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function render() {
+  const lv = getLvInfo();
+  document.getElementById('levelPill').textContent = 'Ур. ' + lv.num + ' · ' + lv.name;
+  document.getElementById('statXp').textContent = state.totalXp;
+  document.getElementById('statStreak').textContent = calcStreak(state);
+  const lastW = state.weights[state.weights.length - 1];
+  document.getElementById('statWeight').textContent = lastW ? lastW.v.toFixed(1) : '—';
+  document.getElementById('xpFill').style.width = lv.pct + '%';
+  document.getElementById('xpNums').textContent = lv.prog + ' / ' + lv.range + ' XP';
+
+  const today = todayKey();
+  const d = new Date();
+  document.getElementById('todayStr').textContent = d.toLocaleDateString('ru-RU', {day:'numeric', month:'long', weekday:'short'});
+
+  const e = state.entries[today] || {};
+  document.getElementById('card-workout').className = 'checkin' + (e.workout ? ' done' : '');
+  document.getElementById('card-nutrition').className = 'checkin' + (e.nutrition ? ' done' : '');
+
+  renderChart();
+  renderHistory();
+  renderAch();
+}
+
+function toggle(type) {
+  const today = todayKey();
+  if (!state.entries[today]) state.entries[today] = {};
+  const e = state.entries[today];
+  const xp = type === 'workout' ? 30 : 20;
+  if (e[type]) {
+    e[type] = false;
+    state.totalXp = Math.max(0, state.totalXp - xp);
+    showToast('Отметка снята  −' + xp + ' XP');
+  } else {
+    e[type] = true;
+    state.totalXp += xp;
+    const msg = type === 'workout' ? '💪 Тренировка засчитана!' : '🥗 Питание засчитано!';
+    showToast(msg + '  +' + xp + ' XP');
+  }
+  save(); render();
+}
+
+function logWeight() {
+  const val = parseFloat(document.getElementById('wInput').value);
+  if (!val || val < 30 || val > 300) { showToast('⚠ Введи корректный вес'); return; }
+  const today = todayKey();
+  if (!state.entries[today]) state.entries[today] = {};
+  const isFirst = !state.entries[today].weightLogged;
+  if (isFirst) { state.entries[today].weightLogged = true; state.totalXp += 10; }
+  const idx = state.weights.findIndex(w => w.d === today);
+  if (idx >= 0) state.weights[idx].v = val;
+  else state.weights.push({d: today, v: val});
+  state.weights.sort((a,b) => a.d.localeCompare(b.d));
+  document.getElementById('wInput').value = '';
+  showToast('⚖️ Вес записан' + (isFirst ? '  +10 XP' : ''));
+  save(); render();
+}
+
+function renderChart() {
+  const data = state.weights.slice(-30);
+  const labels = data.map(w => { const p = w.d.slice(5).split('-'); return p[1]+'.'+p[0]; });
+  const vals = data.map(w => w.v);
+  if (chart) { chart.destroy(); chart = null; }
+  const ctx = document.getElementById('myChart').getContext('2d');
+  if (!data.length) { ctx.clearRect(0,0,9999,9999); return; }
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Вес (кг)',
+        data: vals,
+        borderColor: '#7c6ff7',
+        backgroundColor: 'rgba(124,111,247,0.08)',
+        tension: 0.35,
+        pointBackgroundColor: '#a99ff9',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#4a4860', font: { size: 11, family: "'DM Mono', monospace" } },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          ticks: { color: '#4a4860', font: { size: 11 }, callback: v => v + ' кг' },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        }
+      }
+    }
+  });
+}
+
+function renderHistory() {
+  const keys = Object.keys(state.entries).sort().reverse().slice(0, 60);
+  const el = document.getElementById('histList');
+  if (!keys.length) { el.innerHTML = '<div class="empty">Ещё нет активности</div>'; return; }
+  el.innerHTML = keys.map(k => {
+    const e = state.entries[k];
+    const pts = (e.workout?30:0) + (e.nutrition?20:0) + (e.weightLogged?10:0);
+    if (!pts) return '';
+    const [y,m,d] = k.split('-');
+    let b = '';
+    if (e.workout) b += '<span class="badge b-w">Тренировка</span>';
+    if (e.nutrition) b += '<span class="badge b-n">Питание</span>';
+    if (e.weightLogged) b += '<span class="badge b-wt">Вес</span>';
+    return `<div class="hist-day">
+      <span class="hist-date">${d}.${m}.${y}</span>
+      <div class="hist-badges">${b}</div>
+      <span class="hist-xp">+${pts}</span>
+    </div>`;
+  }).filter(Boolean).join('');
+}
+
+function renderAch() {
+  const el = document.getElementById('achGrid');
+  el.innerHTML = ACHIEVEMENTS.map(a => {
+    const ok = a.check(state);
+    return `<div class="ach${ok?' unlocked':''}">
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-name">${a.name}</div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(tab) {
+  ['chart','history','ach'].forEach(t => {
+    document.getElementById('panel-' + t).style.display = t === tab ? '' : 'none';
+    document.getElementById('tab-' + t).className = 'tab' + (t === tab ? ' active' : '');
+  });
+  if (tab === 'chart') renderChart();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function doReset() {
+  if (confirm('Сбросить ВСЕ данные? Это необратимо.')) {
+    state = {totalXp:0, entries:{}, weights:[]};
+    localStorage.removeItem('fittrack_v2');
+    render();
+    showToast('Данные сброшены');
+  }
+}
+
+load();
+</script>
+</body>
+</html>
